@@ -1,137 +1,103 @@
-import os
 import sys
 import pickle
-import argparse
+from pathlib import Path
+import typer
+from typing import Annotated
 
 from data_management.read_csv import read_track_csv, read_static_info, read_meta_info
 from visualization.visualize_frame import VisualizationPlot
 
 
-def create_args():
-    """
-    Create and parse command line arguments for the highD dataset tool.
-
-    Returns:
-        dict: Dictionary of parsed arguments.
-    """
-    parser = argparse.ArgumentParser(description="ParameterOptimizer")
-    # --- Input paths ---
-    parser.add_argument(
-        "--input_path",
-        default="../data/01_tracks.csv",
-        type=str,
-        help="CSV file of the tracks",
-    )
-    parser.add_argument(
-        "--input_static_path",
-        default="../data/01_tracksMeta.csv",
-        type=str,
-        help="Static meta data file for each track",
-    )
-    parser.add_argument(
-        "--input_meta_path",
-        default="../data/01_recordingMeta.csv",
-        type=str,
-        help="Static meta data file for the whole video",
-    )
-    parser.add_argument(
-        "--pickle_path",
-        default="../data/01.pickle",
-        type=str,
-        help='Converted pickle file that contains corresponding information of the "input_path" file',
-    )
-    # --- Settings ---
-    parser.add_argument(
-        "--visualize",
-        default=True,
-        type=lambda x: (str(x).lower() == "true"),
-        help="True if you want to visualize the data.",
-    )
-    parser.add_argument(
-        "--background_image",
-        default="../data/01_highway.png",
-        type=str,
-        help="Optional: you can specify the correlating background image.",
-    )
-
-    # --- Visualization settings ---
-    parser.add_argument(
-        "--plotBoundingBoxes",
-        default=True,
-        type=lambda x: (str(x).lower() == "true"),
-        help="Optional: decide whether to plot the bounding boxes or not.",
-    )
-    parser.add_argument(
-        "--plotDirectionTriangle",
-        default=True,
-        type=lambda x: (str(x).lower() == "true"),
-        help="Optional: decide whether to plot the direction triangle or not.",
-    )
-    parser.add_argument(
-        "--plotTextAnnotation",
-        default=True,
-        type=lambda x: (str(x).lower() == "true"),
-        help="Optional: decide whether to plot the text annotation or not.",
-    )
-    parser.add_argument(
-        "--plotTrackingLines",
-        default=True,
-        type=lambda x: (str(x).lower() == "true"),
-        help="Optional: decide whether to plot the tracking lines or not.",
-    )
-    parser.add_argument(
-        "--plotClass",
-        default=True,
-        type=lambda x: (str(x).lower() == "true"),
-        help="Optional: decide whether to show the class in the text annotation.",
-    )
-    parser.add_argument(
-        "--plotVelocity",
-        default=True,
-        type=lambda x: (str(x).lower() == "true"),
-        help="Optional: decide whether to show the class in the text annotation.",
-    )
-    parser.add_argument(
-        "--plotIDs",
-        default=True,
-        type=lambda x: (str(x).lower() == "true"),
-        help="Optional: decide whether to show the class in the text annotation.",
-    )
-
-    # --- I/O settings ---
-    parser.add_argument(
-        "--save_as_pickle",
-        default=False,
-        type=lambda x: (str(x).lower() == "true"),
-        help="Optional: you can save the tracks as pickle.",
-    )
-    parsed_arguments = vars(parser.parse_args())
-    return parsed_arguments
-
-
-if __name__ == "__main__":
-    created_arguments = create_args()
+def main(
+    input_path: Annotated[Path, typer.Option(help="CSV file of the tracks")] = Path(
+        "../data/01_tracks.csv"
+    ),
+    input_static_path: Annotated[
+        Path, typer.Option(help="Static meta data file for each track")
+    ] = Path("../data/01_tracksMeta.csv"),
+    input_meta_path: Annotated[
+        Path, typer.Option(help="Static meta data file for the whole video")
+    ] = Path("../data/01_recordingMeta.csv"),
+    pickle_path: Annotated[
+        Path,
+        typer.Option(
+            help="Converted pickle file that contains corresponding information of the 'input_path' file"
+        ),
+    ] = Path("../data/01.pickle"),
+    visualize: Annotated[
+        bool, typer.Option(help="True if you want to visualize the data.")
+    ] = True,
+    background_image: Annotated[
+        Path,
+        typer.Option(
+            help="Optional: you can specify the correlating background image."
+        ),
+    ] = Path("../data/01_highway.png"),
+    plotBoundingBoxes: Annotated[
+        bool,
+        typer.Option(
+            help="Optional: decide whether to plot the bounding boxes or not."
+        ),
+    ] = True,
+    plotDirectionTriangle: Annotated[
+        bool,
+        typer.Option(
+            help="Optional: decide whether to plot the direction triangle or not."
+        ),
+    ] = True,
+    plotTextAnnotation: Annotated[
+        bool,
+        typer.Option(
+            help="Optional: decide whether to plot the text annotation or not."
+        ),
+    ] = True,
+    plotTrackingLines: Annotated[
+        bool,
+        typer.Option(
+            help="Optional: decide whether to plot the tracking lines or not."
+        ),
+    ] = True,
+    plotClass: Annotated[
+        bool,
+        typer.Option(
+            help="Optional: decide whether to show the class in the text annotation."
+        ),
+    ] = True,
+    plotVelocity: Annotated[
+        bool,
+        typer.Option(
+            help="Optional: decide whether to show the velocity in the text annotation."
+        ),
+    ] = True,
+    plotIDs: Annotated[
+        bool,
+        typer.Option(
+            help="Optional: decide whether to show the IDs in the text annotation."
+        ),
+    ] = True,
+    save_as_pickle: Annotated[
+        bool, typer.Option(help="Optional: you can save the tracks as pickle.")
+    ] = False,
+):
     print("Try to find the saved pickle file for better performance.")
     # Read the track csv and convert to useful format
-    if os.path.exists(created_arguments["pickle_path"]):
-        with open(created_arguments["pickle_path"], "rb") as fp:
+    if pickle_path.exists():
+        with pickle_path.open("rb") as fp:
             tracks = pickle.load(fp)
-        print("Found pickle file {}.".format(created_arguments["pickle_path"]))
+        print(f"Found pickle file {pickle_path}.")
     else:
         print("Pickle file not found, csv will be imported now.")
-        tracks = read_track_csv(created_arguments)
+        tracks = read_track_csv(input_path)
         print("Finished importing the pickle file.")
 
-    if created_arguments["save_as_pickle"] and not os.path.exists(
-        created_arguments["pickle_path"]
-    ):
+    if save_as_pickle and not pickle_path.exists():
         print("Save tracks to pickle file.")
-        with open(created_arguments["pickle_path"], "wb") as fp:
+        with pickle_path.open("wb") as fp:
             pickle.dump(tracks, fp)
 
     # Read the static info
     try:
-        static_info = read_static_info(created_arguments)
+        static_info = read_static_info(input_static_path)
     except Exception as e:
         print(
             f"The static info file is either missing or contains incorrect characters. Error: {e}"
@@ -140,14 +106,14 @@ if __name__ == "__main__":
 
     # Read the video meta
     try:
-        meta_dictionary = read_meta_info(created_arguments)
+        meta_dictionary = read_meta_info(input_meta_path)
     except Exception as e:
         print(
             f"The video meta file is either missing or contains incorrect characters. Error: {e}"
         )
         sys.exit(1)
 
-    if created_arguments["visualize"]:
+    if visualize:
         if tracks is None:
             print("Please specify the path to the tracks csv/pickle file.")
             sys.exit(1)
@@ -158,6 +124,20 @@ if __name__ == "__main__":
             print("Please specify the path to the video meta csv file.")
             sys.exit(1)
         visualization_plot = VisualizationPlot(
-            created_arguments, tracks, static_info, meta_dictionary
+            background_image=background_image,
+            plotBoundingBoxes=plotBoundingBoxes,
+            plotDirectionTriangle=plotDirectionTriangle,
+            plotTextAnnotation=plotTextAnnotation,
+            plotTrackingLines=plotTrackingLines,
+            plotClass=plotClass,
+            plotVelocity=plotVelocity,
+            plotIDs=plotIDs,
+            tracks=tracks,
+            static_info=static_info,
+            meta_dictionary=meta_dictionary,
         )
         visualization_plot.show()
+
+
+if __name__ == "__main__":
+    typer.run(main)

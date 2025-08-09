@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from typing import Any, Dict, List
+from pathlib import Path
 
 # TRACK FILE
 BBOX = "bbox"
@@ -64,17 +65,17 @@ UPPER_LANE_MARKINGS = "upperLaneMarkings"
 LOWER_LANE_MARKINGS = "lowerLaneMarkings"
 
 
-def read_track_csv(arguments):
+def read_track_csv(input_path: str | Path) -> list[dict[str, Any]]:
     """
     Reads the tracks file from highD data and returns a list of track dictionaries.
 
     Args:
-        arguments (dict): The parsed arguments for the program containing the input path for the tracks csv file.
+        input_path (str or Path): Path to the tracks csv file.
 
     Returns:
         List[Dict[str, Any]]: A list containing all tracks as dictionaries.
     """
-    df: pd.DataFrame = pd.read_csv(arguments["input_path"])
+    df: pd.DataFrame = pd.read_csv(input_path)
     grouped = df.groupby([TRACK_ID], sort=False)
     tracks: List[Dict[str, Any]] = [None] * grouped.ngroups
     current_track: int = 0
@@ -117,17 +118,17 @@ def read_track_csv(arguments):
     return tracks
 
 
-def read_static_info(arguments):
+def read_static_info(input_static_path: str | Path) -> dict[int, dict[str, Any]]:
     """
     Reads the static info file from highD data and returns a dictionary with track_id as key.
 
     Args:
-        arguments (dict): The parsed arguments for the program containing the input path for the static csv file.
+        input_static_path (str or Path): Path to the static csv file.
 
     Returns:
         Dict[int, Dict[str, Any]]: The static dictionary - the key is the track_id and the value is the corresponding data for this track.
     """
-    df: pd.DataFrame = pd.read_csv(arguments["input_static_path"])
+    df: pd.DataFrame = pd.read_csv(input_static_path)
     static_dictionary: Dict[int, Dict[str, Any]] = {}
     for i_row in range(df.shape[0]):
         track_id: int = int(df[TRACK_ID][i_row])
@@ -152,17 +153,17 @@ def read_static_info(arguments):
     return static_dictionary
 
 
-def read_meta_info(arguments):
+def read_meta_info(input_meta_path: str | Path) -> dict[str, Any]:
     """
     Reads the video meta file from highD data and returns a dictionary with general video information.
 
     Args:
-        arguments (dict): The parsed arguments for the program containing the input path for the video meta csv file.
+        input_meta_path (str or Path): Path to the video meta csv file.
 
     Returns:
         Dict[str, Any]: The meta dictionary containing the general information of the video.
     """
-    df: pd.DataFrame = pd.read_csv(arguments["input_meta_path"])
+    df: pd.DataFrame = pd.read_csv(input_meta_path)
     extracted_meta_dictionary: Dict[str, Any] = {
         ID: int(df[ID][0]),
         FRAME_RATE: int(df[FRAME_RATE][0]),
