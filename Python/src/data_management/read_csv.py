@@ -1,7 +1,18 @@
 import pandas as pd
 import numpy as np
-from typing import Any
+from typing import Any, Sequence
+
 from pathlib import Path
+
+
+def _check_required_columns(
+    df: pd.DataFrame, required_columns: Sequence[str], file_path: str
+) -> None:
+    missing = set(required_columns) - set(df.columns)
+    if missing:
+        raise RuntimeError(
+            f"Missing required columns in CSV file '{file_path}': {missing}"
+        )
 
 
 # TRACK FILE
@@ -80,7 +91,6 @@ def read_track_csv(input_path: str | Path) -> list[dict[str, Any]]:
         RuntimeError: If reading or processing the CSV file fails (e.g., file not found, missing columns, or invalid format).
     """
     try:
-        df: pd.DataFrame = pd.read_csv(input_path)
         required_columns = [
             TRACK_ID,
             FRAME,
@@ -108,29 +118,24 @@ def read_track_csv(input_path: str | Path) -> list[dict[str, Any]]:
             RIGHT_PRECEDING_ID,
             LANE_ID,
         ]
-        missing = set(required_columns) - set(df.columns)
-        if missing:
-            raise RuntimeError(
-                f"Missing required columns in track CSV file '{input_path}': {missing}"
-            )
-        grouped = df.groupby([TRACK_ID], sort=False)
-        tracks: list[dict[str, Any]] = [None] * grouped.ngroups
-        current_track: int = 0
+        df: pd.DataFrame = pd.read_csv(input_path, usecols=required_columns)
+        _check_required_columns(df, required_columns, str(input_path))
+
+        # Vectorized construction of tracks
+        grouped = df.groupby(TRACK_ID, sort=False)
+        tracks = []
         for group_id, rows in grouped:
-            bounding_boxes = np.transpose(
-                np.array(
+            track = {
+                TRACK_ID: np.int64(group_id),
+                FRAME: rows[FRAME].values,
+                BBOX: np.stack(
                     [
                         rows[X].values,
                         rows[Y].values,
                         rows[WIDTH].values,
                         rows[HEIGHT].values,
                     ]
-                )
-            )
-            tracks[current_track] = {
-                TRACK_ID: np.int64(group_id),
-                FRAME: rows[FRAME].values,
-                BBOX: bounding_boxes,
+                ),
                 X_VELOCITY: rows[X_VELOCITY].values,
                 Y_VELOCITY: rows[Y_VELOCITY].values,
                 X_ACCELERATION: rows[X_ACCELERATION].values,
@@ -151,7 +156,7 @@ def read_track_csv(input_path: str | Path) -> list[dict[str, Any]]:
                 RIGHT_PRECEDING_ID: rows[RIGHT_PRECEDING_ID].values,
                 LANE_ID: rows[LANE_ID].values,
             }
-            current_track += 1
+            tracks.append(track)
         return tracks
     except Exception as e:
         raise RuntimeError(
@@ -226,6 +231,8 @@ def read_static_info(input_static_path: str | Path) -> dict[int, dict[str, Any]]
         static_dict: dict[int, dict[str, Any]] = {}
         for row in df.itertuples(index=False):
             track_id: int = getattr(row, TRACK_ID)
+            # 'class' is a reserved keyword, pandas renames it to 'class_' in namedtuples
+            class_value = getattr(row, "class_", getattr(row, CLASS, None))
             static_dict[track_id] = {
                 TRACK_ID: track_id,
                 WIDTH: getattr(row, WIDTH),
@@ -233,7 +240,7 @@ def read_static_info(input_static_path: str | Path) -> dict[int, dict[str, Any]]
                 INITIAL_FRAME: getattr(row, INITIAL_FRAME),
                 FINAL_FRAME: getattr(row, FINAL_FRAME),
                 NUM_FRAMES: getattr(row, NUM_FRAMES),
-                CLASS: getattr(row, CLASS),
+                CLASS: class_value,
                 DRIVING_DIRECTION: getattr(row, DRIVING_DIRECTION),
                 TRAVELED_DISTANCE: getattr(row, TRAVELED_DISTANCE),
                 MIN_X_VELOCITY: getattr(row, MIN_X_VELOCITY),

@@ -70,3 +70,13 @@ Parameter name | Default value | Type | Description
  visualize | True | boolean | True for visualizing the video including all tracks and False for just reading in the data.
  background_image | None | string | The path to the corresponding background image of the selected video. This triggers the visualization in a way that the vehicles and its tracks are plotted on this background image
  save_as_pickle | True | boolean | True for saving the read in information in a pickle file for faster future loading.
+
+## Running Tests
+
+After installing the dependencies, you can run the test suite to verify that everything works as expected. From the Python directory, run:
+
+```shell
+pytest tests
+```
+
+This will execute all tests in the `tests` directory and report the results. All tests should pass if the installation and environment are correct.
