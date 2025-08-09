@@ -1,0 +1,40 @@
+
+[project]
+name = "highd-dataset"
+version = "0.1.0"
+description = "Visualisation Tool for the highD dataset"
+authors = [{ name = "Robert Krajewski", email = "robert.w.krajewski@gmail.com" }]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "pandas"
+]
+readme = "README.md"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "ruff",
+    "pre-commit"
+]
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+disallow_untyped_defs = true
+check_untyped_defs = true

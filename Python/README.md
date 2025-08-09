@@ -1,7 +1,6 @@
 ## highD Python tools
-The python toolbox gives the opportunity to read in the highD csv files and visualize them in an interactive 
-plot. Through modularity, one can use the i/o functions directly for own usage. In the following, 
-each method is shortly described to maintain easy and correct usage.
+This Python toolbox allows you to read highD csv files and visualize them interactively.
+The modular design lets you use the I/O functions directly in your own code. Below, each method is briefly described for easy and correct usage.
 
 ```
  |-data
@@ -17,63 +16,44 @@ each method is shortly described to maintain easy and correct usage.
 
 ## Installation and Quick Start
 
-1. Create a new Python environment or select a pre-existing one. 
-   This code is tested with Python 3.12, but is very probably compatible with newer releases of Python.
 
-   a. 
-      If you use Anaconda3, this can be done as follows:
-      ```shell 
-      conda create --name highd-tools312 python=3.12
-      conda activate highd-tools312
-      ```
-   b. 
-         If you use venv, you need to install Python 3.12 (from https://www.python.org/downloads/) locally. 
-         Then you are able to create the environment as follows:
-         ```shell 
-         <your_python_path> -m venv --system-site-packages venv
-         ```
-         For the next steps, you would need to call `venv/bin/python3.12` instead of `python3`. 
+Install using [uv](https://github.com/astral-sh/uv):
 
-2. Install required packages by navigating to the root directory and using
-    ```shell 
-    python3 -m pip install -r requirements.txt
+    ```shell
+    uv sync
     ```
-3. To run the visualization tool, navigate to the `src/` directory
-   ```shell
-   cd src
-   ```
-   See below for further explanations.
+
 
 ## Quickstart
-1) Copy the csv files into the **data** directory in a sub folder 
-3) (Optional) Modify the folder_name (sub folder) and video_name variable in main.py or by changing 
+1) Copy the csv files into the **data** directory in a sub folder
+3) (Optional) Modify the folder_name (sub folder) and video_name variable in main.py or by changing
 the arguments when calling the python function
 4) Run main.py
 
 ## Method descriptions
-One can find short descriptions of each method implemented in this toolbox. 
+One can find short descriptions of each method implemented in this toolbox.
 ### main.py
-The main file is the starting point for the program. In this main file, the program first reads in 
-several input arguments that control the program. There are mandatory parameter defined like the paths for the 
+The main file is the starting point for the program. In this main file, the program first reads in
+several input arguments that control the program. There are mandatory parameter defined like the paths for the
 highD csv files. You can find the other parameters and their descriptions in the "Parameter" section below. The main file
 reads in the highD data and passes it to the visualization program. The visualization program is an interactive plot that
-is able to display the lanes and the vehicles driving on that lanes. One can interactively switch between frames to see 
-how the tracks of the vehicles evolve over time. 
+is able to display the lanes and the vehicles driving on that lanes. One can interactively switch between frames to see
+how the tracks of the vehicles evolve over time.
 ### read_csv.py
 The "read_csv.py" file contains the methods for reading in the highD data. The first method "read_track_csv"
-reads the information for each tracked vehicle. Every unique track contains information and position of the 
-tracked and detected vehicle for each frame. 
+reads the information for each tracked vehicle. Every unique track contains information and position of the
+tracked and detected vehicle for each frame.
 
 The method "read_static_info" extracts the static information of each track. Static information is, for instance, the
-direction, average velocity and more characteristic values. 
+direction, average velocity and more characteristic values.
 
-The method "read_video_meta" reads the general meta information of the whole video. 
+The method "read_video_meta" reads the general meta information of the whole video.
 
 ### visualize_frame.py
 The visualization program is a class "VisualizationPlot" that takes the information of the three highD csv files to create
-an interactive plot that allows switching between frames of the video containing virtual vehicles. The virtual vehicles 
-contain some information about their tracks, which can be shown by clicking on the corresponding yellow information box 
-above each vehicle bounding box. 
+an interactive plot that allows switching between frames of the video containing virtual vehicles. The virtual vehicles
+contain some information about their tracks, which can be shown by clicking on the corresponding yellow information box
+above each vehicle bounding box.
 
 ### plot_utils.py
 The plot utilities contain a utility function that helps to visualize the frame bar of the visualization plot.
@@ -90,4 +70,3 @@ Parameter name | Default value | Type | Description
  visualize | True | boolean | True for visualizing the video including all tracks and False for just reading in the data.
  background_image | None | string | The path to the corresponding background image of the selected video. This triggers the visualization in a way that the vehicles and its tracks are plotted on this background image
  save_as_pickle | True | boolean | True for saving the read in information in a pickle file for faster future loading.
-
