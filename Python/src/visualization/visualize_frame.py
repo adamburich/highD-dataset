@@ -21,6 +21,9 @@ class VisualizationPlot(object):
         self.changed_button = False
         self.rect_map = {}
         self.plotted_objects = []
+        self.is_playing = False
+        self.play_timer = None
+        self.frame_rate = meta_dictionary.get(FRAME_RATE, 25)
 
         # Create figure and axes
         if fig is None:
@@ -57,6 +60,8 @@ class VisualizationPlot(object):
         self.ax_button_previous = self.fig.add_axes([0.05, 0.035, 0.02, 0.07])  # Previous button
         self.ax_button_next = self.fig.add_axes([0.325, 0.035, 0.02, 0.07])  # Next button
         self.ax_button_next2 = self.fig.add_axes([0.35, 0.035, 0.025, 0.07])  # Next x5 button
+        self.ax_button_play = self.fig.add_axes([0.385, 0.035, 0.04, 0.07])  # Play/Pause button
+        self.ax_speed_slider = self.fig.add_axes([0.44, 0.05, 0.12, 0.03], facecolor=ax_color)  # Speed slider
 
         # Define the widgets
         self.frame_slider = Slider(self.ax_slider, 'Frame', 1, self.maximum_frames,
@@ -65,6 +70,9 @@ class VisualizationPlot(object):
         self.button_previous = Button(self.ax_button_previous, 'Previous')
         self.button_next = Button(self.ax_button_next, 'Next')
         self.button_next2 = Button(self.ax_button_next2, 'Next x5')
+        self.button_play = Button(self.ax_button_play, 'Play')
+        self.speed_slider = Slider(self.ax_speed_slider, 'Speed', 0.25, 4.0,
+                                   valinit=1.0, valstep=0.25)
 
         # Define the callbacks for the widgets' actions
         self.frame_slider.on_changed(self.update_slider)
@@ -72,11 +80,55 @@ class VisualizationPlot(object):
         self.button_next.on_clicked(self.update_button_next)
         self.button_previous2.on_clicked(self.update_button_previous2)
         self.button_next2.on_clicked(self.update_button_next2)
+        self.button_play.on_clicked(self.toggle_play)
+        self.speed_slider.on_changed(self.update_speed)
 
         self.ax.set_autoscale_on(False)
 
+    def toggle_play(self, _):
+        if self.is_playing:
+            self._stop_play()
+        else:
+            self._start_play()
+
+    def _start_play(self):
+        self.is_playing = True
+        self.button_play.label.set_text('Pause')
+        self.fig.canvas.draw_idle()
+        interval = int(1000 / (self.frame_rate * self.speed_slider.val))
+        self.play_timer = self.fig.canvas.new_timer(interval=interval)
+        self.play_timer.add_callback(self._play_step)
+        self.play_timer.start()
+
+    def _stop_play(self):
+        self.is_playing = False
+        self.button_play.label.set_text('Play')
+        self.fig.canvas.draw_idle()
+        if self.play_timer is not None:
+            self.play_timer.stop()
+            self.play_timer = None
+
+    def _play_step(self):
+        if self.current_frame < self.maximum_frames:
+            self.current_frame += 1
+            self.changed_button = True
+            self.trigger_update()
+        else:
+            self._stop_play()
+
+    def update_speed(self, _):
+        if self.is_playing:
+            self.play_timer.stop()
+            self.play_timer = None
+            interval = int(1000 / (self.frame_rate * self.speed_slider.val))
+            self.play_timer = self.fig.canvas.new_timer(interval=interval)
+            self.play_timer.add_callback(self._play_step)
+            self.play_timer.start()
+
     def update_slider(self, value):
         if not self.changed_button:
+            if self.is_playing:
+                self._stop_play()
             self.current_frame = value
             self.remove_patches()
             self.update_figure()
