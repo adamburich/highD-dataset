@@ -46,8 +46,6 @@ class VisualizationPlot(object):
             # Create lane markings
             self.background_image = None
             self.y_sign = -1
-            self.outer_line_thickness = .2
-            self.lane_color = "white"
             self.plot_highway()
 
         # Initialize the plot with the bounding boxes of the first frame
@@ -71,7 +69,7 @@ class VisualizationPlot(object):
         self.button_next = Button(self.ax_button_next, 'Next')
         self.button_next2 = Button(self.ax_button_next2, 'Next x5')
         self.button_play = Button(self.ax_button_play, 'Play')
-        self.speed_slider = Slider(self.ax_speed_slider, 'Speed', 0.25, 4.0,
+        self.speed_slider = Slider(self.ax_speed_slider, 'Speed', 0.25, 16.0,
                                    valinit=1.0, valstep=0.25)
 
         # Define the callbacks for the widgets' actions
@@ -289,37 +287,31 @@ class VisualizationPlot(object):
         self.plotted_objects = plotted_objects
 
     def plot_highway(self):
-        # Initialization
         upper_lanes = self.meta_dictionary[UPPER_LANE_MARKINGS]
-        upper_lanes_shape = upper_lanes.shape
         lower_lanes = self.meta_dictionary[LOWER_LANE_MARKINGS]
-        lower_lanes_shape = lower_lanes.shape
-        # Top lane area
-        rect = plt.Rectangle((0, self.y_sign * lower_lanes[lower_lanes_shape[0] - 1] - 5), 400,
-                             lower_lanes[lower_lanes_shape[0] - 1] - upper_lanes[0] + 10,
-                             color="grey", fill=True, alpha=1, zorder=5)
-        self.ax.add_patch(rect)
-        rect = plt.Rectangle((0, self.y_sign * upper_lanes[0]), 400, self.outer_line_thickness, color=self.lane_color,
-                             fill=True, alpha=1, zorder=5)
-        self.ax.add_patch(rect)
-        for i in range(1, upper_lanes_shape[0] - 1):
-            plt.plot((0, 400), (self.y_sign * upper_lanes[i], self.y_sign * upper_lanes[i]), color=self.lane_color,
-                     linestyle="dashed", dashes=(25, 70), alpha=1, zorder=5)
-        rect = plt.Rectangle((0, self.y_sign * upper_lanes[upper_lanes_shape[0] - 1]), 400, self.outer_line_thickness,
-                             color=self.lane_color,
-                             fill=True, alpha=1, zorder=5)
-        self.ax.add_patch(rect)
-        # Bottom lane area
-        rect = plt.Rectangle((0, self.y_sign * lower_lanes[0]), 400, self.outer_line_thickness, color=self.lane_color,
-                             alpha=1, zorder=5)
-        self.ax.add_patch(rect)
-        for i in range(1, lower_lanes_shape[0] - 1):
-            plt.plot((0, 400), (self.y_sign * lower_lanes[i], self.y_sign * lower_lanes[i]), color=self.lane_color,
-                     linestyle="dashed", dashes=(25, 70), alpha=1, zorder=5)
-        rect = plt.Rectangle((0, self.y_sign * lower_lanes[lower_lanes_shape[0] - 1]), 400, self.outer_line_thickness,
-                             color=self.lane_color,
-                             alpha=1, zorder=5)
-        self.ax.add_patch(rect)
+
+        # Derive road x-extent from track bounding boxes so the background always
+        # covers the full recording regardless of its length.
+        x_start = 0.0
+        x_end = 400.0
+        for tr in self.tracks:
+            bb = np.asarray(tr[BBOX])
+            if len(bb):
+                x_start = min(x_start, float(bb[:, 0].min()))
+                x_end = max(x_end, float((bb[:, 0] + bb[:, 2]).max()))
+        x_start -= 20
+        x_end += 20
+        road_width = x_end - x_start
+
+        y_top = self.y_sign * upper_lanes[0]
+        y_bot = self.y_sign * lower_lanes[-1]
+        road_height = abs(y_bot - y_top) + 10
+        road_y = min(y_top, y_bot) - 5
+
+        # Gray road background — no lane markings
+        self.ax.add_patch(plt.Rectangle(
+            (x_start, road_y), road_width, road_height,
+            color="grey", fill=True, alpha=1, zorder=5))
 
     def on_click(self, event):
         artist = event.artist
