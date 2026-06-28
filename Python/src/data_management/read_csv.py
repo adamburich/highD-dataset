@@ -172,4 +172,13 @@ def read_meta_info(arguments):
                                  N_TRUCKS: int(df[N_TRUCKS][0]),
                                  UPPER_LANE_MARKINGS: np.fromstring(df[UPPER_LANE_MARKINGS][0], sep=";"),
                                  LOWER_LANE_MARKINGS: np.fromstring(df[LOWER_LANE_MARKINGS][0], sep=";")}
+
+    # Optional angled-road geometry (written by _exp_to_highd.py when a road model
+    # was fitted). Passed through verbatim so the visualizer can draw an aligned
+    # road; absent for legacy/highD recordings, which fall back to horizontal lanes.
+    for col in ("roadAngle", "roadOriginX", "roadOriginY",
+                "roadSMin", "roadSMax", "roadDMin", "roadDMax"):
+        if col in df.columns:
+            extracted_meta_dictionary[col] = float(df[col][0])
+
     return extracted_meta_dictionary

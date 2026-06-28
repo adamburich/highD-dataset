@@ -1,4 +1,5 @@
 import os
+import sys
 import matplotlib as mpl
 
 mpl.rcParams['savefig.dpi'] = 300
@@ -7,6 +8,14 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import imread
 from data_management.read_csv import *
 from matplotlib.widgets import Button, Slider
+import numpy as np
+
+# Add repo root to path so we can import road_model. This file lives at
+# highD-tools/Python/src/visualization/, so the repo root is four levels up
+# (road_model.py sits one level above the highD-tools submodule).
+repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
 
 
 class VisualizationPlot(object):
@@ -302,6 +311,61 @@ class VisualizationPlot(object):
         x_start -= 20
         x_end += 20
         road_width = x_end - x_start
+
+        # Angled-road model present? recordingMeta carries it in the SAME metric
+        # frame as the track coordinates (written by _exp_to_highd.py, all /ppm), so
+        # we rebuild a RoadModel directly and reuse the shared drawing helpers. The
+        # plot flips y by self.y_sign (vehicles are drawn at y_sign*y), so the road
+        # geometry must be flipped the same way.
+        road_keys = ("roadAngle", "roadOriginX", "roadOriginY",
+                     "roadSMin", "roadSMax", "roadDMin", "roadDMax")
+        has_road_model = all(k in self.meta_dictionary for k in road_keys)
+
+        if has_road_model:
+            try:
+                from road_model import RoadModel, road_edge_polygon, lane_boundary_polylines
+
+                # upper_lanes is already a parsed float array: the lane CENTRE
+                # offsets (road-frame lateral d, metres). Build the full model so the
+                # helpers compute boundaries/edges exactly as the tracker does.
+                lane_centres = [float(v) for v in np.atleast_1d(upper_lanes)]
+                model = RoadModel(
+                    x0=float(self.meta_dictionary["roadOriginX"]),
+                    y0=float(self.meta_dictionary["roadOriginY"]),
+                    theta=np.radians(float(self.meta_dictionary["roadAngle"])),
+                    n_lanes=len(lane_centres),
+                    lane_offsets=lane_centres,
+                    lane_width_px=0.0,  # unused for drawing
+                    s_min=float(self.meta_dictionary["roadSMin"]),
+                    s_max=float(self.meta_dictionary["roadSMax"]),
+                    d_min=float(self.meta_dictionary["roadDMin"]),
+                    d_max=float(self.meta_dictionary["roadDMax"]),
+                )
+
+                # Road surface (swept ribbon), drawn behind everything.
+                xs_poly, ys_poly = road_edge_polygon(model)
+                self.ax.add_patch(plt.Polygon(
+                    list(zip(xs_poly, self.y_sign * ys_poly)),
+                    color="grey", fill=True, alpha=0.5, zorder=0))
+
+                # Interior lane boundaries (dashed), above the surface, below vehicles.
+                for xs_line, ys_line in lane_boundary_polylines(model):
+                    self.ax.plot(xs_line, self.y_sign * ys_line, color="white",
+                                 linewidth=1.0, alpha=0.8, linestyle="--", zorder=1)
+
+            except Exception as e:
+                import traceback
+                print(f"Warning: Could not draw model-aligned road: {e}")
+                traceback.print_exc()
+                self._draw_legacy_road(x_start, road_width)
+        else:
+            # Legacy: draw horizontal gray rectangle
+            self._draw_legacy_road(x_start, road_width)
+
+    def _draw_legacy_road(self, x_start, road_width):
+        """Draw the legacy axis-aligned gray road background."""
+        upper_lanes = self.meta_dictionary[UPPER_LANE_MARKINGS]
+        lower_lanes = self.meta_dictionary[LOWER_LANE_MARKINGS]
 
         y_top = self.y_sign * upper_lanes[0]
         y_bot = self.y_sign * lower_lanes[-1]
