@@ -254,8 +254,8 @@ class VisualizationPlot(object):
                     if self.arguments["plotVelocity"]:
                         if annotation_text != '':
                             annotation_text += '|'
-                        x_velocity = abs(float(current_velocity)) * 3.6
-                        annotation_text += "{:.2f}km/h".format(x_velocity)
+                        x_velocity = abs(float(current_velocity)) * 2.237
+                        annotation_text += "{:.2f}mph".format(x_velocity)
                     if self.arguments["plotIDs"]:
                         if annotation_text != '':
                             annotation_text += '|'
