@@ -363,19 +363,39 @@ class VisualizationPlot(object):
             self._draw_legacy_road(x_start, road_width)
 
     def _draw_legacy_road(self, x_start, road_width):
-        """Draw the legacy axis-aligned gray road background."""
-        upper_lanes = self.meta_dictionary[UPPER_LANE_MARKINGS]
-        lower_lanes = self.meta_dictionary[LOWER_LANE_MARKINGS]
+        """Draw the axis-aligned road background.
 
-        y_top = self.y_sign * upper_lanes[0]
-        y_bot = self.y_sign * lower_lanes[-1]
-        road_height = abs(y_bot - y_top) + 10
-        road_y = min(y_top, y_bot) - 5
+        Two-way recordings carry distinct upper/lower carriageway markings: each
+        carriageway is drawn as its own gray ribbon with dashed interior lane
+        boundaries, and the gap between them (the grass/barrier median) is drawn
+        green. One-way recordings duplicate the same markings into both fields
+        and get a single ribbon.
+        """
+        upper_lanes = np.atleast_1d(self.meta_dictionary[UPPER_LANE_MARKINGS])
+        lower_lanes = np.atleast_1d(self.meta_dictionary[LOWER_LANE_MARKINGS])
+        two_way = not np.array_equal(upper_lanes, lower_lanes)
+        carriageways = [upper_lanes, lower_lanes] if two_way else [upper_lanes]
 
-        # Gray road background — no lane markings
-        self.ax.add_patch(plt.Rectangle(
-            (x_start, road_y), road_width, road_height,
-            color="grey", fill=True, alpha=1, zorder=5))
+        edges = []  # inner edges of each ribbon, for the median strip
+        for marks in carriageways:
+            ys = sorted(self.y_sign * float(v) for v in marks)
+            self.ax.add_patch(plt.Rectangle(
+                (x_start, ys[0] - 0.5), road_width, (ys[-1] - ys[0]) + 1.0,
+                color="grey", fill=True, alpha=1, zorder=5))
+            for y in ys[1:-1]:
+                self.ax.plot([x_start, x_start + road_width], [y, y],
+                             color="white", linewidth=1.0, alpha=0.8,
+                             linestyle="--", zorder=6)
+            edges.append((ys[0], ys[-1]))
+
+        if two_way:
+            # the median: the strip between the two ribbons' facing edges
+            lo = min(edges[0][1], edges[1][1])
+            hi = max(edges[0][0], edges[1][0])
+            if hi > lo:
+                self.ax.add_patch(plt.Rectangle(
+                    (x_start, lo + 0.5), road_width, (hi - lo) - 1.0,
+                    color="#3a5f3a", fill=True, alpha=1, zorder=5))
 
     def on_click(self, event):
         artist = event.artist
